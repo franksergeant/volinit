@@ -1,4 +1,4 @@
-* VolInit --- Initialize Named Volume for SSL Certificates
+* Volinit --- Initialize Named Volume for SSL Certificates
 
 [[https://nepotism.net][Frank Sergeant]]
 
