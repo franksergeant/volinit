@@ -1,0 +1,96 @@
+* VolInit --- Initialize Named Volume for SSL Certificates
+
+[[https://nepotism.net][Frank Sergeant]]
+
+[[https://github.com/franksergeant/volinit]]
+
+A 1.23 MB image to initialize a named volume to hold the Letsencrypt
+certificates, which must be in a file with permissions of 0600.
+
+This is especially useful for initializing volumes on remote hosts.
+
+The image creates a directory named =acme= with permissions 0700 and
+an empty certificate file within it named =acme.json= with
+permissions 0600.
+
+If the volume is created with
+
+: $ docker create acme
+
+it will get the default permissions which will be too permissive and
+Letsencrypt will refuse to create the certificate(s).
+
+A new volume takes its initial content and permissions *from* the
+container's file, so this image creates =/acme/acme.json= with the
+correct permissions.  Then when we create the =acme= volume by
+mounting it on =/acme/acme.json=, the volume will be initialized
+properly and can be used thereafter.
+
+If you are not using Docker contexts, you can ignore the =docker
+context ...= commands shown below.
+
+Run it locally to inspect it:
+
+: $ docker context use default
+: $ docker run -it --rm --name volinit franksergeant/volinit
+
+It drops you into a shell.  Note that =/acme.json= has 0600
+permissions.
+
+If you want to build the =volinit= image directly from the Dockerfile:
+
+: $ docker context use default
+: $ docker build . -t volinit
+
+To run it on a remote machine, e.g., =prod.com=, and create a volume
+named =acme= on =prod.com=, assuming you have created a context for
+=prod.com=, run
+
+: $ docker context use prod
+: (so docker commands typed on your local machine run on the remote machine)
+: $ docker pull franksergeant/volinit
+: (pull the image down to the remote machine)
+: $ docker volume ls
+: (see if the acme volume already exists)
+: $ docker volume rm acme
+: (if so, remove it)
+: $ docker run -it --rm --name volinit -v acme:/acme franksergeant/volinit
+: (create a volume named "acme" and initialize /acme/acme.json within the volume)
+: <containerid>:/# ls -als /
+: (verify the permissions)
+: <containerid>:/# exit
+
+Alternatively, you can use the =docker-compose.yml= by replacing the
+=docker run ...= line above with
+
+: $ docker-compose up -d
+: $ docker-compose down
+
+
+Now the remote volume named =acme= is ready to be used.  For example,
+within a Traefik version 2 service in a "docker-compose.yml= file:
+
+: services:
+: 
+:   traefik:
+:     image: "traefik:v2.4"
+:     container_name: "traefik"
+:     command:
+:       ...
+:       - "--certificatesresolvers.le.acme.storage=/acme.json"
+:       ...
+:     volumes:
+:       # So that Traefik can listen to the Docker events
+:       - /var/run/docker.sock:/var/run/docker.sock:ro
+:       # So letsencrypt can store the certificate(s)
+:       - acme:/acme
+: 
+: volumes:
+:   acme:
+:     external: true
+:   ...
+
+** About
+
+Written by Frank Sergeant <https://nepotism.net> [[mailto:frank@nepotism.net][frank@nepotism.net]],
+released under the [[http://opensource.org/licenses/MIT][MIT license]].

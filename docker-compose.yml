@@ -1,0 +1,18 @@
+services:
+
+  init-volume:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: franksergeant/volinit
+    container_name: "volinit"
+    volumes:
+      # Initialize volume from container's /acme directory
+      #  if volume did not already exist
+      - acme:/acme
+
+volumes:
+  acme:
+    name: acme
+    
+  
